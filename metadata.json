@@ -1,0 +1,6 @@
+{
+  "name": "TradingView Markets - Global Financial Markets & Live Analytics",
+  "description": "Explore global financial markets with live quotes, interactive charts, sector heatmaps, asset screeners, technical analysis gauges, and economic calendar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
