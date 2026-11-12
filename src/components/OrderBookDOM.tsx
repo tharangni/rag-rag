@@ -36,7 +36,7 @@ export const OrderBookDOM: React.FC<OrderBookDOMProps> = ({ item, onQuickTrade }
     }
 
     const lowestAsk = askLevels[askLevels.length - 1]?.price || currentPrice + tickStep;
-    const highestBid = bids[0]?.price || currentPrice - tickStep;
+    const highestBid = bidLevels[0]?.price || currentPrice - tickStep;
     const sp = Math.max(0.01, lowestAsk - highestBid);
     const spBps = (sp / currentPrice) * 10000;
     const maxV = Math.max(cumAsk, cumBid) || 1;
