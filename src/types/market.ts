@@ -100,3 +100,51 @@ export interface PaperPosition {
   avgPrice: number;
   type: 'buy' | 'sell';
 }
+
+export type DrawingTool = 'cursor' | 'trendline' | 'horizontal' | 'fibonacci' | 'position' | 'measure';
+
+export type ChartStyle = 'candles' | 'hollow' | 'heikin' | 'line' | 'area';
+
+export interface ChartDrawing {
+  id: string;
+  type: DrawingTool;
+  startX: number;
+  startY: number;
+  endX?: number;
+  endY?: number;
+  price?: number;
+  stopPrice?: number;
+  targetPrice?: number;
+  text?: string;
+  color?: string;
+}
+
+export interface OrderBookLevel {
+  price: number;
+  amount: number;
+  total: number;
+}
+
+export interface StrategyMetric {
+  name: string;
+  strategyId: string;
+  netProfitPct: number;
+  winRatePct: number;
+  profitFactor: number;
+  maxDrawdownPct: number;
+  sharpeRatio: number;
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  avgTradePct: number;
+  trades: {
+    id: string;
+    type: 'BUY' | 'SELL';
+    price: number;
+    time: string;
+    profitPct: number;
+    reason: string;
+  }[];
+}
+
+export type MultiChartLayout = '1x1' | '1x2' | '2x1' | '2x2';

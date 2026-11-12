@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MarketItem, PriceAlert, PaperPosition } from './types/market';
 import { INITIAL_MARKETS } from './data/mockMarkets';
-import { Header } from './components/Header';
+import { Header, NavTab } from './components/Header';
 import { TickerTape } from './components/TickerTape';
 import { InteractiveChart } from './components/InteractiveChart';
 import { TechnicalGauge } from './components/TechnicalGauge';
@@ -14,6 +14,10 @@ import { MarketScreener } from './components/MarketScreener';
 import { WatchlistSidebar } from './components/WatchlistSidebar';
 import { SearchModal } from './components/SearchModal';
 import { SymbolDetailModal } from './components/SymbolDetailModal';
+import { MultiChartGrid } from './components/MultiChartGrid';
+import { StrategyTester } from './components/StrategyTester';
+import { MarketCorrelation } from './components/MarketCorrelation';
+import { OrderBookDOM } from './components/OrderBookDOM';
 import {
   TrendingUp,
   TrendingDown,
@@ -24,13 +28,18 @@ import {
   BookmarkCheck,
   Zap,
   Info,
-  Maximize2
+  Maximize2,
+  Sliders,
+  LayoutGrid,
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
+import { soundEngine } from './utils/audio';
 
 export default function App() {
   const [markets, setMarkets] = useState<MarketItem[]>(INITIAL_MARKETS);
   const [selectedSymbol, setSelectedSymbol] = useState<string>('NVDA');
-  const [activeTab, setActiveTab] = useState<'overview' | 'supercharts' | 'heatmaps' | 'screener' | 'calendar' | 'news'>('overview');
+  const [activeTab, setActiveTab] = useState<NavTab>('overview');
   const [isDark, setIsDark] = useState<boolean>(true);
   const [isWatchlistOpen, setIsWatchlistOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
@@ -75,7 +84,6 @@ export default function App() {
     if (!isSimulating) return;
 
     const interval = setInterval(() => {
-      // Pick 1 to 2 random items to update
       setMarkets((prev) => {
         const next = [...prev];
         const numUpdates = Math.floor(Math.random() * 2) + 1;
@@ -110,6 +118,7 @@ export default function App() {
                 (al.condition === 'above' && newPrice >= al.targetPrice) ||
                 (al.condition === 'below' && newPrice <= al.targetPrice)
               ) {
+                soundEngine.playAlertChime();
                 setAlertToast(`Alert Triggered: ${item.symbol} reached $${newPrice.toFixed(2)}!`);
                 setTimeout(() => setAlertToast(null), 5000);
               }
@@ -131,6 +140,7 @@ export default function App() {
 
   // Watchlist toggle handler
   const handleToggleWatchlist = (symbol: string) => {
+    soundEngine.playClick();
     setWatchlistSymbols((prev) =>
       prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol]
     );
@@ -145,6 +155,7 @@ export default function App() {
         setTimeout(() => setAlertToast(null), 3000);
         return;
       }
+      soundEngine.playOrderFilled();
       setPaperBalance((b) => b - totalCost);
       setPaperPositions((prev) => {
         const existing = prev.find((p) => p.symbol === symbol && p.type === 'buy');
@@ -159,6 +170,7 @@ export default function App() {
       setTimeout(() => setAlertToast(null), 4000);
     } else {
       // Sell
+      soundEngine.playOrderFilled();
       setPaperBalance((b) => b + totalCost);
       setPaperPositions((prev) => {
         const existing = prev.find((p) => p.symbol === symbol);
@@ -179,6 +191,7 @@ export default function App() {
     const item = markets.find((m) => m.symbol === symbol);
     const price = item ? item.price : pos.avgPrice;
     const value = pos.shares * price;
+    soundEngine.playOrderFilled();
     setPaperBalance((b) => b + value);
     setPaperPositions((prev) => prev.filter((p) => p.symbol !== symbol));
     setAlertToast(`Closed position in ${symbol}`);
@@ -186,6 +199,7 @@ export default function App() {
   };
 
   const handleAddAlert = (symbol: string, targetPrice: number, condition: 'above' | 'below') => {
+    soundEngine.playClick();
     const newAlert: PriceAlert = {
       id: `al-${Date.now()}`,
       symbol,
@@ -199,6 +213,7 @@ export default function App() {
   };
 
   const handleRemoveAlert = (id: string) => {
+    soundEngine.playClick();
     setAlerts((prev) => prev.filter((a) => a.id !== id));
   };
 
@@ -231,9 +246,15 @@ export default function App() {
       <TickerTape
         markets={markets}
         selectedSymbol={selectedSymbol}
-        onSelectSymbol={(sym) => setSelectedSymbol(sym)}
+        onSelectSymbol={(sym) => {
+          soundEngine.playClick();
+          setSelectedSymbol(sym);
+        }}
         isSimulating={isSimulating}
-        onToggleSimulation={() => setIsSimulating(!isSimulating)}
+        onToggleSimulation={() => {
+          soundEngine.playClick();
+          setIsSimulating(!isSimulating);
+        }}
         flashSymbols={flashSymbols}
       />
 
@@ -243,14 +264,19 @@ export default function App() {
           {/* TAB 1: MARKETS OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-6 animate-in fade-in duration-150">
-              {/* Markets Hero Bar: Title & Sub-market Quick Filters */}
+              {/* Markets Hero Bar */}
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
-                    Markets Overview
-                  </h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
+                      Markets Overview
+                    </h1>
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#2962ff]/10 text-[#2962ff] font-mono">
+                      TERMINAL PRO
+                    </span>
+                  </div>
                   <p className="text-xs text-neutral-500 dark:text-[#787b86] mt-0.5">
-                    Real-time global quotes, market momentum, and technical indicators across all major asset classes.
+                    Real-time global quotes, interactive financial charting, Level 2 depth, and quantitative backtesting.
                   </p>
                 </div>
 
@@ -264,7 +290,10 @@ export default function App() {
                     return (
                       <button
                         key={sym}
-                        onClick={() => setSelectedSymbol(sym)}
+                        onClick={() => {
+                          soundEngine.playClick();
+                          setSelectedSymbol(sym);
+                        }}
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors cursor-pointer ${
                           isSelected
                             ? 'bg-[#2962ff] text-white font-bold shadow-xs'
@@ -278,8 +307,8 @@ export default function App() {
                               isSelected
                                 ? 'text-white/90'
                                 : isUp
-                                ? 'text-emerald-600 dark:text-[#089981]'
-                                : 'text-rose-600 dark:text-[#f23645]'
+                                ? 'text-[#089981]'
+                                : 'text-[#f23645]'
                             }`}
                           >
                             {isUp ? '+' : ''}{m.changePercent.toFixed(1)}%
@@ -293,12 +322,12 @@ export default function App() {
 
               {/* Central Chart & Technical Split */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left (2 cols): Interactive Candlestick / Line Chart */}
+                {/* Left (2 cols): Pro Interactive Candlestick / Line Chart */}
                 <div className="lg:col-span-2 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-[#787b86]">
-                        Featured Chart
+                        Pro Chart
                       </span>
                       <span className="text-neutral-400 dark:text-[#787b86]">·</span>
                       <span className="text-xs font-mono font-semibold text-neutral-900 dark:text-white">
@@ -327,7 +356,10 @@ export default function App() {
                       </button>
 
                       <button
-                        onClick={() => setInspectedSymbol(selectedItem.symbol)}
+                        onClick={() => {
+                          soundEngine.playClick();
+                          setInspectedSymbol(selectedItem.symbol);
+                        }}
                         className="px-2.5 py-1 text-xs font-medium text-[#2962ff] bg-[#2962ff]/10 hover:bg-[#2962ff]/20 rounded flex items-center gap-1 cursor-pointer transition-colors"
                       >
                         <Maximize2 className="w-3.5 h-3.5" />
@@ -336,41 +368,19 @@ export default function App() {
                     </div>
                   </div>
 
-                  <InteractiveChart item={selectedItem} height={420} />
+                  <InteractiveChart item={selectedItem} height={460} />
                 </div>
 
-                {/* Right (1 col): Technical Gauge */}
-                <div className="lg:col-span-1 flex flex-col gap-6">
+                {/* Right (1 col): Technical Gauge + Level 2 Order Book */}
+                <div className="lg:col-span-1 flex flex-col gap-4">
                   <TechnicalGauge item={selectedItem} />
 
-                  {/* Quick Paper Trade Card */}
-                  <div className="flex flex-col p-4 rounded-lg bg-white dark:bg-[#1e222d] border border-neutral-200 dark:border-[#2a2e39]">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold text-neutral-900 dark:text-white">Quick Trade</span>
-                      <span className="text-xs font-mono text-neutral-500 dark:text-[#787b86]">
-                        {selectedItem.symbol} @ ${selectedItem.price.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => handleTrade(selectedItem.symbol, 'buy', 10, selectedItem.price)}
-                        className="py-2 px-3 bg-[#089981] hover:bg-[#0aa68c] text-white rounded font-bold text-xs cursor-pointer transition-colors text-center"
-                      >
-                        Buy 10 {selectedItem.symbol}
-                      </button>
-                      <button
-                        onClick={() => handleTrade(selectedItem.symbol, 'sell', 10, selectedItem.price)}
-                        className="py-2 px-3 bg-[#f23645] hover:bg-[#e02b3a] text-white rounded font-bold text-xs cursor-pointer transition-colors text-center"
-                      >
-                        Sell 10 {selectedItem.symbol}
-                      </button>
-                    </div>
-
-                    <p className="text-[10px] text-neutral-400 dark:text-[#787b86] mt-2 text-center">
-                      Simulated zero-risk paper trade execution
-                    </p>
-                  </div>
+                  <OrderBookDOM
+                    item={selectedItem}
+                    onQuickTrade={(type, shares, price) => {
+                      handleTrade(selectedItem.symbol, type, shares, price);
+                    }}
+                  />
                 </div>
               </div>
 
@@ -378,28 +388,53 @@ export default function App() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <MarketMovers
                   markets={markets}
-                  onSelectSymbol={(sym) => setSelectedSymbol(sym)}
+                  onSelectSymbol={(sym) => {
+                    soundEngine.playClick();
+                    setSelectedSymbol(sym);
+                  }}
                   selectedSymbol={selectedSymbol}
                 />
                 <GlobalIndices
                   markets={markets}
-                  onSelectSymbol={(sym) => setSelectedSymbol(sym)}
+                  onSelectSymbol={(sym) => {
+                    soundEngine.playClick();
+                    setSelectedSymbol(sym);
+                  }}
                   selectedSymbol={selectedSymbol}
                 />
               </div>
 
-              {/* Interactive S&P 500 Heatmap Preview */}
+              {/* Interactive Stock Heatmap */}
               <div>
                 <MarketHeatmap
-                  onSelectSymbol={(sym) => setSelectedSymbol(sym)}
+                  onSelectSymbol={(sym) => {
+                    soundEngine.playClick();
+                    setSelectedSymbol(sym);
+                  }}
                   selectedSymbol={selectedSymbol}
+                />
+              </div>
+
+              {/* Strategy Tester & Macro Correlation */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <StrategyTester item={selectedItem} />
+                <MarketCorrelation
+                  onSelectSymbol={(sym) => {
+                    soundEngine.playClick();
+                    setSelectedSymbol(sym);
+                  }}
                 />
               </div>
 
               {/* 2-Column: Economic Calendar & Financial News */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <EconomicCalendar />
-                <MarketNews onSelectSymbol={(sym) => setSelectedSymbol(sym)} />
+                <MarketNews
+                  onSelectSymbol={(sym) => {
+                    soundEngine.playClick();
+                    setSelectedSymbol(sym);
+                  }}
+                />
               </div>
             </div>
           )}
@@ -409,9 +444,14 @@ export default function App() {
             <div className="space-y-4 animate-in fade-in duration-150">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-xl font-bold text-neutral-900 dark:text-white">Supercharts Pro Terminal</h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-bold text-neutral-900 dark:text-white">Supercharts Pro Terminal</h1>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#089981]/15 text-[#089981] font-mono">
+                      DRAWING TOOLS ACTIVE
+                    </span>
+                  </div>
                   <p className="text-xs text-neutral-500 dark:text-[#787b86]">
-                    Interactive multi-timeframe financial charting with live candlestick data, volume profile, and moving averages.
+                    Full trading terminal with trendlines, Fibonacci retracements, Bollinger Bands, RSI, MACD, and Level 2 depth.
                   </p>
                 </div>
 
@@ -420,7 +460,10 @@ export default function App() {
                   {markets.map((m) => (
                     <button
                       key={m.symbol}
-                      onClick={() => setSelectedSymbol(m.symbol)}
+                      onClick={() => {
+                        soundEngine.playClick();
+                        setSelectedSymbol(m.symbol);
+                      }}
                       className={`px-2.5 py-1 text-xs font-mono font-semibold rounded cursor-pointer whitespace-nowrap transition-colors ${
                         selectedSymbol === m.symbol
                           ? 'bg-[#2962ff] text-white shadow-xs'
@@ -433,46 +476,39 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Full height interactive chart */}
+              {/* Pro Chart with Drawing Toolbar */}
               <InteractiveChart item={selectedItem} height={520} />
 
-              {/* Detail stats bar */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 font-mono tabular-nums text-xs">
-                <div className="p-3 rounded-lg bg-white dark:bg-[#1e222d] border border-neutral-200 dark:border-[#2a2e39]">
-                  <span className="text-neutral-400 dark:text-[#787b86] text-[10px] block">24h High</span>
-                  <span className="font-bold text-neutral-900 dark:text-white">${selectedItem.high24h.toFixed(2)}</span>
+              {/* 2-Column: Strategy Backtester & Level 2 Order Book */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2">
+                  <StrategyTester item={selectedItem} />
                 </div>
-                <div className="p-3 rounded-lg bg-white dark:bg-[#1e222d] border border-neutral-200 dark:border-[#2a2e39]">
-                  <span className="text-neutral-400 dark:text-[#787b86] text-[10px] block">24h Low</span>
-                  <span className="font-bold text-neutral-900 dark:text-white">${selectedItem.low24h.toFixed(2)}</span>
-                </div>
-                <div className="p-3 rounded-lg bg-white dark:bg-[#1e222d] border border-neutral-200 dark:border-[#2a2e39]">
-                  <span className="text-neutral-400 dark:text-[#787b86] text-[10px] block">Volume</span>
-                  <span className="font-bold text-neutral-900 dark:text-white">{selectedItem.volumeFormatted}</span>
-                </div>
-                <div className="p-3 rounded-lg bg-white dark:bg-[#1e222d] border border-neutral-200 dark:border-[#2a2e39]">
-                  <span className="text-neutral-400 dark:text-[#787b86] text-[10px] block">52W Range</span>
-                  <span className="font-bold text-neutral-900 dark:text-white">
-                    ${selectedItem.week52Low.toFixed(0)} - ${selectedItem.week52High.toFixed(0)}
-                  </span>
-                </div>
-                <div className="p-3 rounded-lg bg-white dark:bg-[#1e222d] border border-neutral-200 dark:border-[#2a2e39]">
-                  <span className="text-neutral-400 dark:text-[#787b86] text-[10px] block">RSI (14)</span>
-                  <span className="font-bold text-[#2962ff]">{selectedItem.oscillators.rsi.toFixed(1)}</span>
-                </div>
-                <div className="p-3 rounded-lg bg-white dark:bg-[#1e222d] border border-neutral-200 dark:border-[#2a2e39]">
-                  <span className="text-neutral-400 dark:text-[#787b86] text-[10px] block">Technical Rating</span>
-                  <span className="font-bold text-[#089981]">{selectedItem.signal}</span>
+                <div className="lg:col-span-1">
+                  <OrderBookDOM
+                    item={selectedItem}
+                    onQuickTrade={(type, shares, price) => {
+                      handleTrade(selectedItem.symbol, type, shares, price);
+                    }}
+                  />
                 </div>
               </div>
             </div>
           )}
 
-          {/* TAB 3: HEATMAPS SCREEN */}
+          {/* TAB 3: MULTI-CHART GRID SCREEN */}
+          {activeTab === 'multichart' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <MultiChartGrid markets={markets} primarySymbol={selectedSymbol} />
+            </div>
+          )}
+
+          {/* TAB 4: HEATMAPS SCREEN */}
           {activeTab === 'heatmaps' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <MarketHeatmap
                 onSelectSymbol={(sym) => {
+                  soundEngine.playClick();
                   setSelectedSymbol(sym);
                   setInspectedSymbol(sym);
                 }}
@@ -481,12 +517,13 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB 4: SCREENER SCREEN */}
+          {/* TAB 5: SCREENER SCREEN */}
           {activeTab === 'screener' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <MarketScreener
                 markets={markets}
                 onSelectSymbol={(sym) => {
+                  soundEngine.playClick();
                   setSelectedSymbol(sym);
                   setInspectedSymbol(sym);
                 }}
@@ -495,18 +532,39 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB 5: CALENDAR SCREEN */}
+          {/* TAB 6: STRATEGY TESTER SCREEN */}
+          {activeTab === 'strategy' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <StrategyTester item={selectedItem} />
+            </div>
+          )}
+
+          {/* TAB 7: MACRO CORRELATION SCREEN */}
+          {activeTab === 'macro' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <MarketCorrelation
+                onSelectSymbol={(sym) => {
+                  soundEngine.playClick();
+                  setSelectedSymbol(sym);
+                  setActiveTab('overview');
+                }}
+              />
+            </div>
+          )}
+
+          {/* TAB 8: CALENDAR SCREEN */}
           {activeTab === 'calendar' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <EconomicCalendar />
             </div>
           )}
 
-          {/* TAB 6: NEWS SCREEN */}
+          {/* TAB 9: NEWS SCREEN */}
           {activeTab === 'news' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <MarketNews
                 onSelectSymbol={(sym) => {
+                  soundEngine.playClick();
                   setSelectedSymbol(sym);
                   setActiveTab('overview');
                 }}
@@ -515,7 +573,7 @@ export default function App() {
           )}
         </main>
 
-        {/* Right Watchlist & Paper Trading Drawer */}
+        {/* Right Watchlist, Level 2 DOM & Paper Trading Drawer */}
         <WatchlistSidebar
           isOpen={isWatchlistOpen}
           onClose={() => setIsWatchlistOpen(false)}
@@ -523,7 +581,10 @@ export default function App() {
           onToggleWatchlist={handleToggleWatchlist}
           markets={markets}
           selectedSymbol={selectedSymbol}
-          onSelectSymbol={(sym) => setSelectedSymbol(sym)}
+          onSelectSymbol={(sym) => {
+            soundEngine.playClick();
+            setSelectedSymbol(sym);
+          }}
           paperBalance={paperBalance}
           onTrade={handleTrade}
           paperPositions={paperPositions}
@@ -552,21 +613,22 @@ export default function App() {
         onClose={() => setIsSearchOpen(false)}
         markets={markets}
         onSelectSymbol={(sym) => {
+          soundEngine.playClick();
           setSelectedSymbol(sym);
           setInspectedSymbol(sym);
         }}
       />
 
-      {/* TradingView Markets Footer */}
+      {/* TradingView Pro Footer */}
       <footer className="mt-auto border-t border-neutral-200 dark:border-[#2a2e39] bg-neutral-50 dark:bg-[#131722] py-6 px-4 lg:px-8 text-xs text-neutral-500 dark:text-[#787b86]">
         <div className="max-w-[1720px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded bg-[#2962ff] flex items-center justify-center text-white text-[10px] font-bold">
               TV
             </div>
-            <span className="font-bold text-neutral-800 dark:text-[#d1d4dc]">TradingView Markets</span>
+            <span className="font-bold text-neutral-800 dark:text-[#d1d4dc]">TradingView Markets Pro</span>
             <span>·</span>
-            <span>Live Global Market Analysis & Financial Terminal</span>
+            <span>Institutional-Grade Terminal Analytics & Algorithmic Strategy Suite</span>
           </div>
 
           <div className="flex items-center gap-6">
@@ -579,7 +641,7 @@ export default function App() {
               <span>tradingview.com/markets</span>
               <ExternalLink className="w-3 h-3" />
             </a>
-            <span className="font-mono text-[11px]">Real-time simulation engine</span>
+            <span className="font-mono text-[11px]">Real-time tick simulation</span>
           </div>
         </div>
       </footer>
